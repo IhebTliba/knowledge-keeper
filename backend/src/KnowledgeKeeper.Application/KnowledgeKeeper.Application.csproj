@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\KnowledgeKeeper.Domain\KnowledgeKeeper.Domain.csproj" />
+  </ItemGroup>
+</Project>
