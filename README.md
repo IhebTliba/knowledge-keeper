@@ -37,7 +37,7 @@ Les règles d'accès sont appliquées par l'API .NET, jamais par le LLM.
 
 ## Avancement
 - [x] Étape 1 — Repo et conventions
-- [ ] Étape 2 — Docker Compose + SQL Server
+- [x] Étape 2 — Docker Compose + SQL Server
 - [ ] Étape 3 — Squelette backend
 - [ ] Étape 4 — Modèle de domaine et base de données
 - [ ] Étape 5 — Authentification JWT et rôles
