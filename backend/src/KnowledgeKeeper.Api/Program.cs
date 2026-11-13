@@ -1,6 +1,6 @@
 using KnowledgeKeeper.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-
+using KnowledgeKeeper.Infrastructure.Persistence;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure();
@@ -16,6 +16,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    // En local uniquement : migrations + données de démo au démarrage.
+    await DatabaseInitializer.InitializeAsync(app.Services);
 }
 
 // Liveness : le processus répond-il ? Aucune dépendance vérifiée.

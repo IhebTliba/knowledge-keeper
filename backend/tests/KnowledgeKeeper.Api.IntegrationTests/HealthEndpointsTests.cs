@@ -2,6 +2,7 @@ using System.Net;
 
 namespace KnowledgeKeeper.Api.IntegrationTests;
 
+[Collection(nameof(ApiCollection))]
 public sealed class HealthEndpointsTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();

@@ -1,3 +1,5 @@
+using KnowledgeKeeper.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,16 +12,18 @@ public static class DependencyInjection
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        // La chaîne de connexion est lue au moment du check, depuis la configuration finale.
-        // Les tests d'intégration peuvent ainsi la remplacer par celle de leur conteneur.
+        // La chaîne de connexion est lue à l'exécution, depuis la configuration finale,
+        // pour que les tests d'intégration puissent la remplacer.
+        services.AddDbContext<AppDbContext>((sp, options) =>
+            options.UseSqlServer(GetConnectionString(sp)));
+
         services.AddHealthChecks()
-            .AddSqlServer(
-                sp => sp.GetRequiredService<IConfiguration>().GetConnectionString(ConnectionStringName)
-                      ?? throw new InvalidOperationException(
-                          $"La chaîne de connexion '{ConnectionStringName}' est absente."),
-                name: "sqlserver",
-                tags: [ReadyTag]);
+            .AddSqlServer(GetConnectionString, name: "sqlserver", tags: [ReadyTag]);
 
         return services;
     }
+
+    private static string GetConnectionString(IServiceProvider sp) =>
+        sp.GetRequiredService<IConfiguration>().GetConnectionString(ConnectionStringName)
+        ?? throw new InvalidOperationException($"La chaîne de connexion '{ConnectionStringName}' est absente.");
 }

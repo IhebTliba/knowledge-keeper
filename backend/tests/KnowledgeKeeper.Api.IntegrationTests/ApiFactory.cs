@@ -1,16 +1,28 @@
+using KnowledgeKeeper.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.MsSql;
 
 namespace KnowledgeKeeper.Api.IntegrationTests;
 
-/// <summary>Démarre l'API en mémoire, branchée sur un vrai SQL Server 2025 jetable.</summary>
+/// <summary>Toutes les classes de cette collection partagent le même SQL Server.</summary>
+[CollectionDefinition(nameof(ApiCollection))]
+public sealed class ApiCollection : ICollectionFixture<ApiFactory>
+{
+}
+
+/// <summary>Démarre l'API en mémoire, branchée sur un vrai SQL Server 2025 jetable, schéma migré.</summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly MsSqlContainer _sqlServer = new MsSqlBuilder()
         .WithImage("mcr.microsoft.com/mssql/server:2025-latest")
         .Build();
+
+    private string _connectionString = string.Empty;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -18,11 +30,23 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:KnowledgeKeeper"] = _sqlServer.GetConnectionString()
+                ["ConnectionStrings:KnowledgeKeeper"] = _connectionString
             }));
     }
 
-    public Task InitializeAsync() => _sqlServer.StartAsync();
+    public async Task InitializeAsync()
+    {
+        await _sqlServer.StartAsync();
+
+        // Une base dédiée plutôt que "master", la base par défaut du conteneur.
+        _connectionString = new SqlConnectionStringBuilder(_sqlServer.GetConnectionString())
+        {
+            InitialCatalog = "KnowledgeKeeper"
+        }.ConnectionString;
+
+        await using var scope = Services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+    }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
