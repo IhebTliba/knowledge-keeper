@@ -1,3 +1,6 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using KnowledgeKeeper.Application.Abstractions;
 using KnowledgeKeeper.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -15,7 +18,12 @@ public sealed class ApiCollection : ICollectionFixture<ApiFactory>
 {
 }
 
-/// <summary>Démarre l'API en mémoire, branchée sur un vrai SQL Server 2025 jetable, schéma migré.</summary>
+public static class TestSettings
+{
+    public const string JwtSigningKey = "integration-tests-signing-key-at-least-32-chars";
+}
+
+/// <summary>Démarre l'API en mémoire, branchée sur un vrai SQL Server 2025 jetable, migré et peuplé.</summary>
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly MsSqlContainer _sqlServer = new MsSqlBuilder()
@@ -30,7 +38,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.ConfigureAppConfiguration((_, config) =>
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:KnowledgeKeeper"] = _connectionString
+                ["ConnectionStrings:KnowledgeKeeper"] = _connectionString,
+                ["Jwt:SigningKey"] = TestSettings.JwtSigningKey
             }));
     }
 
@@ -45,7 +54,22 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         }.ConnectionString;
 
         await using var scope = Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.MigrateAsync();
+        await DemoDataSeeder.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
+    }
+
+    /// <summary>Un client HTTP déjà connecté avec le compte de démo indiqué.</summary>
+    public async Task<HttpClient> CreateClientForAsync(string email)
+    {
+        var client = CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/login",
+            new { email, password = DemoDataSeeder.DemoPassword });
+        response.EnsureSuccessStatusCode();
+
+        var token = await response.Content.ReadFromJsonAsync<TokenResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token!.Token);
+        return client;
     }
 
     async Task IAsyncLifetime.DisposeAsync()
@@ -53,6 +77,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await DisposeAsync();
         await _sqlServer.DisposeAsync();
     }
+
+    private sealed record TokenResponse(string Token, DateTimeOffset ExpiresAt);
 }
 
 /// <summary>Démarre l'API avec une base injoignable, pour tester les cas de panne.</summary>
@@ -65,7 +91,8 @@ public sealed class UnreachableDatabaseApiFactory : WebApplicationFactory<Progra
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:KnowledgeKeeper"] =
-                    "Server=localhost,1;User Id=sa;Password=unused;TrustServerCertificate=True;Connect Timeout=2"
+                    "Server=localhost,1;User Id=sa;Password=unused;TrustServerCertificate=True;Connect Timeout=2",
+                ["Jwt:SigningKey"] = TestSettings.JwtSigningKey
             }));
     }
 }

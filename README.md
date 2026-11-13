@@ -35,12 +35,37 @@ Les règles d'accès sont appliquées par l'API .NET, jamais par le LLM.
 | `infra/` | Docker Compose, scripts |
 | `docs/` | Documentation et ADR |
 
+
+## Base de données
+Les migrations et les données de démo sont appliquées automatiquement au démarrage en Development.
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <Nom> --project src/KnowledgeKeeper.Infrastructure --startup-project src/KnowledgeKeeper.Api --output-dir Persistence/Migrations
+dotnet ef migrations script --idempotent --project src/KnowledgeKeeper.Infrastructure --startup-project src/KnowledgeKeeper.Api
+```
+
+
+## Authentification (développement)
+Clé de signature JWT, une fois :
+```bash
+dotnet user-secrets set "Jwt:SigningKey" "<au moins 32 caractères aléatoires>" --project src/KnowledgeKeeper.Api
+```
+
+Comptes de démo (mot de passe `Demo123!`) :
+| Email | Rôle | Cas |
+| --- | --- | --- |
+| karim.benali@example.com | Employee | employé sortant |
+| sarah.haddad@example.com | Employee | successeure de Karim |
+| lina.mansour@example.com | Employee | non concernée (403) |
+| nadia.cherif@example.com | HumanResources | voit toutes les transmissions |
+
 ## Avancement
 - [x] Étape 1 — Repo et conventions
 - [x] Étape 2 — Docker Compose + SQL Server
-- [ ] Étape 3 — Squelette backend
-- [ ] Étape 4 — Modèle de domaine et base de données
-- [ ] Étape 5 — Authentification JWT et rôles
+- [x] Étape 3 — Squelette backend
+- [x] Étape 4 — Modèle de domaine et base de données
+- [x] Étape 5 — Authentification JWT et rôles
 - [ ] Étape 6 — Squelette AI service
 - [ ] Étape 7 — Entretien de transmission IA
 - [ ] Étape 8 — Extraction en fiches de savoir

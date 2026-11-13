@@ -1,3 +1,4 @@
+using KnowledgeKeeper.Application.Abstractions;
 using KnowledgeKeeper.Domain.Transfers;
 using KnowledgeKeeper.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,28 +10,22 @@ namespace KnowledgeKeeper.Api.IntegrationTests;
 public sealed class PersistenceTests(ApiFactory factory)
 {
     [Fact]
-    public async Task Les_donnees_de_demo_ne_sont_inserees_qu_une_seule_fois()
+    public async Task Relancer_le_seed_ne_duplique_pas_les_donnees()
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        await DemoDataSeeder.SeedAsync(db);
-        await DemoDataSeeder.SeedAsync(db);
+        await DemoDataSeeder.SeedAsync(db, scope.ServiceProvider.GetRequiredService<IPasswordHasher>());
 
-        Assert.Equal(2, await db.Departments.CountAsync());
-        Assert.Equal(3, await db.Employees.CountAsync());
+        Assert.Equal(3, await db.Departments.CountAsync());
+        Assert.Equal(4, await db.Employees.CountAsync());
+        Assert.Equal(4, await db.UserAccounts.CountAsync());
         Assert.Equal(1, await db.KnowledgeTransfers.CountAsync());
     }
 
     [Fact]
     public async Task La_transmission_de_Karim_est_relue_avec_son_successeur_et_son_statut()
     {
-        await using (var seedScope = factory.Services.CreateAsyncScope())
-        {
-            await DemoDataSeeder.SeedAsync(seedScope.ServiceProvider.GetRequiredService<AppDbContext>());
-        }
-
-        // Nouveau scope = nouveau DbContext : on relit vraiment depuis SQL Server, pas depuis le cache.
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 

@@ -60,4 +60,8 @@ public sealed class KnowledgeTransfer : Entity
 
         Status = TransferStatus.Completed;
     }
+
+    /// <summary>Vrai si l'employé est l'employé sortant ou le successeur de cette transmission.</summary>
+    public bool Involves(Guid employeeId) =>
+        employeeId == DepartingEmployeeId || employeeId == SuccessorId;
 }
