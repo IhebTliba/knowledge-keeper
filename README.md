@@ -66,7 +66,7 @@ Comptes de démo (mot de passe `Demo123!`) :
 - [x] Étape 3 — Squelette backend
 - [x] Étape 4 — Modèle de domaine et base de données
 - [x] Étape 5 — Authentification JWT et rôles
-- [ ] Étape 6 — Squelette AI service
+- [x] Étape 6 — Squelette AI service
 - [ ] Étape 7 — Entretien de transmission IA
 - [ ] Étape 8 — Extraction en fiches de savoir
 - [ ] Étape 9 — Copilote RAG avec citations
