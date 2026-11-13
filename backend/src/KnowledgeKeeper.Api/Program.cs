@@ -1,12 +1,21 @@
+using System.Text.Json.Serialization;
+using KnowledgeKeeper.Api.Auth;
+using KnowledgeKeeper.Api.Endpoints;
+using KnowledgeKeeper.Application;
 using KnowledgeKeeper.Infrastructure;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using KnowledgeKeeper.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
+builder.Services.AddJwtSecurity();
 builder.Services.AddProblemDetails();
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerWithJwt();
 
 var app = builder.Build();
 
@@ -21,6 +30,9 @@ if (app.Environment.IsDevelopment())
     await DatabaseInitializer.InitializeAsync(app.Services);
 }
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Liveness : le processus répond-il ? Aucune dépendance vérifiée.
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
@@ -30,8 +42,11 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions
 // Readiness : l'API peut-elle servir des requêtes ? Vérifie SQL Server.
 app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
-    Predicate = check => check.Tags.Contains(DependencyInjection.ReadyTag)
+        Predicate = check => check.Tags.Contains(KnowledgeKeeper.Infrastructure.DependencyInjection.ReadyTag)
 });
+
+app.MapAuthEndpoints();
+app.MapTransferEndpoints();
 
 app.Run();
 

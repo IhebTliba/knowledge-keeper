@@ -64,4 +64,24 @@ public class KnowledgeTransferTests
         Assert.Equal(TransferStatus.Completed, transfer.Status);
         Assert.Throws<DomainException>(() => transfer.AssignSuccessor(Sarah()));
     }
+
+    [Fact]
+    public void Involves_reconnait_l_employe_sortant_et_le_successeur()
+    {
+        var karim = DepartingKarim();
+        var sarah = Sarah();
+        var transfer = KnowledgeTransfer.Plan(karim);
+        transfer.AssignSuccessor(sarah);
+
+        Assert.True(transfer.Involves(karim.Id));
+        Assert.True(transfer.Involves(sarah.Id));
+    }
+
+    [Fact]
+    public void Involves_ignore_un_employe_non_concerne()
+    {
+        var transfer = KnowledgeTransfer.Plan(DepartingKarim());
+
+        Assert.False(transfer.Involves(Guid.NewGuid()));
+    }
 }

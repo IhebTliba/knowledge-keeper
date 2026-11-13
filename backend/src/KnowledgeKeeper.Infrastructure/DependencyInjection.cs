@@ -1,3 +1,5 @@
+using KnowledgeKeeper.Application.Abstractions;
+using KnowledgeKeeper.Infrastructure.Identity;
 using KnowledgeKeeper.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,10 +14,19 @@ public static class DependencyInjection
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        // La chaîne de connexion est lue à l'exécution, depuis la configuration finale,
-        // pour que les tests d'intégration puissent la remplacer.
+        // Persistance : la chaîne de connexion est lue à l'exécution (surchargeable par les tests).
         services.AddDbContext<AppDbContext>((sp, options) =>
             options.UseSqlServer(GetConnectionString(sp)));
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // Sécurité : la configuration JWT est validée au démarrage, l'API refuse de démarrer si elle est invalide.
+        services.AddOptions<JwtOptions>()
+            .BindConfiguration(JwtOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         services.AddHealthChecks()
             .AddSqlServer(GetConnectionString, name: "sqlserver", tags: [ReadyTag]);

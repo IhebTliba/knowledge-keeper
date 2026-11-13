@@ -22,6 +22,40 @@ namespace KnowledgeKeeper.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("KnowledgeKeeper.Domain.Identity.UserAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("UserAccounts", (string)null);
+                });
+
             modelBuilder.Entity("KnowledgeKeeper.Domain.Organization.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -131,6 +165,15 @@ namespace KnowledgeKeeper.Infrastructure.Persistence.Migrations
                     b.HasIndex("SuccessorId");
 
                     b.ToTable("KnowledgeTransfers", (string)null);
+                });
+
+            modelBuilder.Entity("KnowledgeKeeper.Domain.Identity.UserAccount", b =>
+                {
+                    b.HasOne("KnowledgeKeeper.Domain.Organization.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("KnowledgeKeeper.Domain.Organization.Employee", b =>
